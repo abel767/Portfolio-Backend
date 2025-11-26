@@ -7,6 +7,12 @@ require('dotenv').config()
 const app = express()
 const PORT = process.env.PORT || 5000;
 
+// Debug logging
+console.log('🔍 Environment check:');
+console.log('BREVO_USER exists:', !!process.env.BREVO_USER);
+console.log('BREVO_PASS exists:', !!process.env.BREVO_PASS);
+console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
+
 //middleware
 app.use(
   cors({
@@ -40,6 +46,8 @@ const transporter = nodemailer.createTransport({
 transporter.verify((error, success) => {
     if (error) {
         console.error('❌ Email configuration error:', error);
+        console.log('Debug - BREVO_USER:', process.env.BREVO_USER ? 'SET' : 'NOT SET');
+        console.log('Debug - BREVO_PASS:', process.env.BREVO_PASS ? 'SET (length: ' + process.env.BREVO_PASS?.length + ')' : 'NOT SET');
     } else {
         console.log('✅ Email server is ready to send messages');
     }
@@ -59,8 +67,8 @@ app.post('/api/contact', async(req,res) =>{
 
     // Email options
     const mailOptions = {
-        from: process.env.BREVO_USER, // Must use your Brevo sender email
-        to: 'abelthomas.pro@gmail.com', // Your Gmail receives the message
+        from: process.env.BREVO_USER,
+        to: 'abelthomas.pro@gmail.com',
         subject: `Portfolio Contact: Message from ${name}`,
         html: `
           <h2>New Contact Form Submission</h2>
