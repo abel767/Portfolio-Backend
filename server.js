@@ -1,17 +1,11 @@
 const express = require('express')
 const cors = require('cors')
-const nodemailer = require('nodemailer')
 const mongoose = require('mongoose')
+const SibApiV3Sdk = require('@getbrevo/brevo')
 require('dotenv').config()
 
 const app = express()
 const PORT = process.env.PORT || 5000;
-
-// Debug logging
-console.log('🔍 Environment check:');
-console.log('BREVO_USER exists:', !!process.env.BREVO_USER);
-console.log('BREVO_PASS exists:', !!process.env.BREVO_PASS);
-console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
 
 //middleware
 app.use(
@@ -31,27 +25,14 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(()=> console.log('✅ MongoDB connected successfully'))
 .catch(err => console.error('❌ MongoDB connection error:', err))
 
-// Email transporter - BREVO SMTP
-const transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    secure: false,
-    auth: {
-        user: process.env.BREVO_USER,
-        pass: process.env.BREVO_PASS
-    }
-})
+// Initialize Brevo API
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi()
+apiInstance.setApiKey(
+  SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey,
+  process.env.BREVO_API_KEY
+)
 
-// Verify email configuration on startup
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('❌ Email configuration error:', error);
-        console.log('Debug - BREVO_USER:', process.env.BREVO_USER ? 'SET' : 'NOT SET');
-        console.log('Debug - BREVO_PASS:', process.env.BREVO_PASS ? 'SET (length: ' + process.env.BREVO_PASS?.length + ')' : 'NOT SET');
-    } else {
-        console.log('✅ Email server is ready to send messages');
-    }
-});
+console.log('✅ Brevo API initialized')
 
 // contact endpoint
 app.post('/api/contact', async(req,res) =>{
@@ -65,25 +46,34 @@ app.post('/api/contact', async(req,res) =>{
         })
     }
 
-    // Email options
-    const mailOptions = {
-        from: process.env.BREVO_USER,
-        to: 'abelthomas.pro@gmail.com',
-        subject: `Portfolio Contact: Message from ${name}`,
-        html: `
-          <h2>New Contact Form Submission</h2>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Message:</strong></p>
-          <p>${message}</p>
-          <hr>
-          <p><small>Sent from portfolio contact form</small></p>
-        `,
-        replyTo: email, 
-    };
+    // Prepare email
+    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail()
+    
+    sendSmtpEmail.sender = { 
+        email: 'abelthomas.pro@gmail.com', 
+        name: 'Portfolio Contact Form' 
+    }
+    sendSmtpEmail.to = [{ 
+        email: 'abelthomas.pro@gmail.com', 
+        name: 'Abel Thomas' 
+    }]
+    sendSmtpEmail.replyTo = { 
+        email: email, 
+        name: name 
+    }
+    sendSmtpEmail.subject = `Portfolio Contact: Message from ${name}`
+    sendSmtpEmail.htmlContent = `
+      <h2>New Contact Form Submission</h2>
+      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Message:</strong></p>
+      <p>${message}</p>
+      <hr>
+      <p><small>Sent from portfolio contact form</small></p>
+    `
 
     try {
-        await transporter.sendMail(mailOptions)
+        await apiInstance.sendTransacEmail(sendSmtpEmail)
         console.log(`✅ Email sent successfully from ${email}`)
         res.status(200).json({
             success: true,
