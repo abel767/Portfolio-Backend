@@ -10,8 +10,9 @@ const PORT = process.env.PORT || 5000;
 //middleware
 app.use(
   cors({
-    origin: "https://abelthomas-portfolio.vercel.app",
+    origin: ["https://abelthomas-portfolio.vercel.app", "http://localhost:5173"],
     methods: ["GET", "POST"],
+    credentials: true
   })
 );
 app.use(express.json())
@@ -21,20 +22,17 @@ mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 })
-.then(()=> console.log('MongoDB connected successfully'))
-.catch(err => console.error('MongoDB connection error:', err))
+.then(()=> console.log('✅ MongoDB connected successfully'))
+.catch(err => console.error('❌ MongoDB connection error:', err))
 
-// Email transporter configuration - UPDATED FOR RENDER
+// Email transporter - BREVO SMTP
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: 'smtp-relay.brevo.com',
     port: 587,
-    secure: false, // true for 465, false for other ports
+    secure: false,
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    tls: {
-        rejectUnauthorized: false
+        user: process.env.BREVO_USER,
+        pass: process.env.BREVO_PASS
     }
 })
 
@@ -61,8 +59,8 @@ app.post('/api/contact', async(req,res) =>{
 
     // Email options
     const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: process.env.EMAIL_USER,
+        from: process.env.BREVO_USER, // Must use your Brevo sender email
+        to: 'abelthomas.pro@gmail.com', // Your Gmail receives the message
         subject: `Portfolio Contact: Message from ${name}`,
         html: `
           <h2>New Contact Form Submission</h2>
@@ -70,18 +68,21 @@ app.post('/api/contact', async(req,res) =>{
           <p><strong>Email:</strong> ${email}</p>
           <p><strong>Message:</strong></p>
           <p>${message}</p>
+          <hr>
+          <p><small>Sent from portfolio contact form</small></p>
         `,
         replyTo: email, 
     };
 
     try {
         await transporter.sendMail(mailOptions)
+        console.log(`✅ Email sent successfully from ${email}`)
         res.status(200).json({
             success: true,
             message: 'Message sent successfully'
         })
     } catch(error){
-        console.error('Error sending email:', error)
+        console.error('❌ Error sending email:', error)
         res.status(500).json({
             success: false,
             message: 'Failed to send message. Please try again'
@@ -95,5 +96,5 @@ app.get('/api/health', (req,res) =>{
 })
 
 app.listen(PORT, ()=>{
-    console.log(`Server running on port ${PORT}`)
+    console.log(`🚀 Server running on port ${PORT}`)
 })
