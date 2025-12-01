@@ -9,11 +9,16 @@ const PORT = process.env.PORT || 5000;
 
 //middleware
 app.use(
-  cors({
-    origin: ["https://abelthomas-portfolio.vercel.app", "http://localhost:5173"],
-    methods: ["GET", "POST"],
-    credentials: true
-  })
+  cors({
+    origin: [
+        "https://abelthomas-portfolio.vercel.app", 
+        "https://abelthomas.site",                 // The root domain
+        "https://www.abelthomas.site",             // <--- ADD THE WWW VERSION
+        "http://localhost:5173"                    
+    ],
+    methods: ["GET", "POST"],
+    credentials: true
+  })
 );
 app.use(express.json())
 
